@@ -144,7 +144,7 @@ class PythonDb:
                     response = self.data
         return response
 
-    def get_data_by_query(self, index_name, field=None, operator=None, value=None, size=None):
+    def get_data_by_query(self, index_name, field=None, operator=None, value=None, size=None, delete=None):
         response = []
         if field is not None and operator is not None and value is not None:
             if f"{index_name}.json" in os.listdir("./DATABASE/"):
@@ -157,36 +157,56 @@ class PythonDb:
                     try:
                         if operator == "==":
                             if eval(f"{doc}['source']{query_field}") == value:
-                                response.append(doc)
-                            if len(response) == size:
+                                if delete is not True:
+                                    response.append(doc)
+                                else:
+                                    self.data["data"].remove(doc)
+                            if size is not None and len(response) == size:
                                 return response
                         if operator == "!=":
                             if eval(f"{doc}['source']{query_field}") != value:
-                                response.append(doc)
-                            if len(response) == size:
+                                if delete is not True:
+                                    response.append(doc)
+                                else:
+                                    self.data["data"].remove(doc)
+                            if size is not None and len(response) == size:
                                 return response
                         if operator == ">":
                             if eval(f"{doc}['source']{query_field}") > value:
-                                response.append(doc)
-                            if len(response) == size:
+                                if delete is not True:
+                                    response.append(doc)
+                                else:
+                                    self.data["data"].remove(doc)
+                            if size is not None and len(response) == size:
                                 return response
                         if operator == "<":
                             if eval(f"{doc}['source']{query_field}") < value:
-                                response.append(doc)
-                            if len(response) == size:
+                                if delete is not True:
+                                    response.append(doc)
+                                else:
+                                    self.data["data"].remove(doc)
+                            if size is not None and len(response) == size:
                                 return response
                         if operator == ">=":
                             if eval(f"{doc}['source']{query_field}") >= value:
-                                response.append(doc)
-                            if len(response) == size:
+                                if delete is not True:
+                                    response.append(doc)
+                                else:
+                                    self.data["data"].remove(doc)
+                            if size is not None and len(response) == size:
                                 return response
                         if operator == "<=":
                             if eval(f"{doc}['source']{query_field}") <= value:
-                                response.append(doc)
-                            if len(response) == size:
+                                if delete is not True:
+                                    response.append(doc)
+                                else:
+                                    self.data["data"].remove(doc)
+                            if size is not None and len(response) == size:
                                 return response
                     except:pass
-                return response
+                if delete is not True:
+                    return response
+                return self.data
 
     def sort_data(self, list, sort_field, sort_type):
         field = ""
@@ -244,3 +264,121 @@ class PythonDb:
                 if "sort_type" in self.query:
                     result = self.sort_data(result, self.sort_field, self.sort_type)
                 return self.open_relation(self.index_name, result)
+
+    def count(self, index_name, query):
+        self.index_name = index_name
+        self.query = query
+        if type(self.query) is dict:
+            if 'field' in self.query:
+                self.field = self.query["field"]
+            else:
+                self.field is None
+            if 'operator' in self.query :
+                self.operator = self.query["operator"]
+            else:
+                self.operator is None
+            if 'value' in self.query:
+                self.value = self.query["value"]
+            else:
+                self.value is None
+            result = self.get_data_by_query(self.index_name, 
+                                            self.field, 
+                                            self.operator, 
+                                            self.value)
+            return {"count":len(result)}
+
+    def delete(self, index_name, query=None, id=None, document=None, doc=None):
+        self.index_name = index_name
+        self.qeury = query
+        self.id = id
+        self.document = document
+        self.doc = doc
+        if self.id is not None and self.query is None:
+            if 'relation.json' in os.listdir("./DATABASE/"):
+                with open(f'./DATABASE/{self.index_name}.json', "r", encoding='utf-8') as file:
+                    self.object = json.loads(file.read())
+                for doc in self.object["data"]:
+                    if doc["id"] == self.id:
+                        self.object["data"].remove(doc)
+        elif self.id is None and self.query is not None:
+            if type(self.query) is dict:
+                if 'field' in self.query:
+                    self.field = self.query["field"]
+                else:
+                    self.field is None
+                if 'operator' in self.query :
+                    self.operator = self.query["operator"]
+                else:
+                    self.operator is None
+                if 'value' in self.query:
+                    self.value = self.query["value"]
+                else:
+                    self.value is None
+                if "size" in self.query:
+                    self.size = self.query["size"]
+                else:
+                    self.size = 10
+                if "sort_field" in self.query:
+                    self.sort_field = self.query["sort_field"]
+                else:
+                    self.sort_field is None
+                if "sort_type" in self.query:
+                    self.sort_type = self.query['sort_type']
+                else:
+                    self.sort_type = "asc"
+                self.object = self.get_data_by_query(self.index_name, 
+                                                self.field, 
+                                                self.operator, 
+                                                self.value, 
+                                                self.size, 
+                                                delete=True)
+        self.result = self.index(self.index_name, self.object, multi_data=True)
+        return self.result
+
+    def update(self, index_name, query=None, id=None, document=None, doc=None):
+        self.index_name = index_name
+        self.qeury = query
+        self.id = id
+        self.document = document
+        self.doc = doc
+        self.result = []
+        if self.id is not None and self.query is None:
+            if 'relation.json' in os.listdir("./DATABASE/"):
+                with open(f'./DATABASE/{self.index_name}.json', "r", encoding='utf-8') as file:
+                    self.object = json.loads(file.read())
+                for doc in self.object["data"]:
+                    if doc["id"] == self.id:
+                        self.result = [doc]
+        elif self.id is None and self.query is not None:
+            if type(self.query) is dict:
+                if 'field' in self.query:
+                    self.field = self.query["field"]
+                else:
+                    self.field is None
+                if 'operator' in self.query :
+                    self.operator = self.query["operator"]
+                else:
+                    self.operator is None
+                if 'value' in self.query:
+                    self.value = self.query["value"]
+                else:
+                    self.value is None
+                if "size" in self.query:
+                    self.size = self.query["size"]
+                else:
+                    self.size = 10
+                if "sort_field" in self.query:
+                    self.sort_field = self.query["sort_field"]
+                else:
+                    self.sort_field is None
+                if "sort_type" in self.query:
+                    self.sort_type = self.query['sort_type']
+                else:
+                    self.sort_type = "asc"
+                self.result = result = self.get_data_by_query(self.index_name, 
+                                                self.field, 
+                                                self.operator, 
+                                                self.value, 
+                                                self.size)
+        for sub_result in self.result:
+            pass
